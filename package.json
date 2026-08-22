@@ -1,0 +1,25 @@
+{
+  "name": "solitaire",
+  "version": "1.0.0",
+  "description": "An implementation of draw-1 or draw-3 solitaire",
+  "main": "index.js",
+  "repository": "https://github.com/henryjburg/solitaire.git",
+  "author": "Henry Burgess <henryjburg@gmail.com>",
+  "license": "GPL-3.0",
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "start": "node esbuild.config.js --serve"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^3.36.1",
+    "@emotion/react": "^11.14.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  }
+}

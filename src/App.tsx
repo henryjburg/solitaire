@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Flex, Text } from "@chakra-ui/react";
 
 // Custom components
@@ -13,12 +13,14 @@ import _ from "lodash";
 export const App = () => {
   // Game state
   const [game, setGame] = useState<GameState>(new GameState());
-  const [hasDrawn, setHasDrawn] = useState(false);
   const [currentDrawn, setCurrentDrawn] = useState<GameCardProps>();
   const [clubsBaseTop, setClubsBaseTop] = useState<GameCardProps | undefined>();
   const [spadesBaseTop, setSpadesBaseTop] = useState<GameCardProps | undefined>();
   const [diamondsBaseTop, setDiamondsBaseTop] = useState<GameCardProps | undefined>();
   const [heartsBaseTop, setHeartsBaseTop] = useState<GameCardProps | undefined>();
+  
+  // Score state
+  const [score, setScore] = useState(game.getScore());
   
   // Move state
   const [sourceType, setSourceType] = useState<GameSelectionType>();
@@ -27,21 +29,25 @@ export const App = () => {
   const [destinationCard, setDestinationCard] = useState<GameCardLocation>();
   
   const refreshGame = () => {
-    // Refresh the drawn state
-    setHasDrawn(game.getHasDrawn());
+    // Refresh the card draw state
     setCurrentDrawn(game.getDrawn());
+    setScore(game.getScore());
     
     // Refresh the bases
     if (game.getBases()["clubs"].length > 0) setClubsBaseTop(game.getBases()["clubs"][game.getBases()["clubs"].length - 1]);
     if (game.getBases()["spades"].length > 0) setSpadesBaseTop(game.getBases()["spades"][game.getBases()["spades"].length - 1]);
     if (game.getBases()["diamonds"].length > 0) setDiamondsBaseTop(game.getBases()["diamonds"][game.getBases()["diamonds"].length - 1]);
     if (game.getBases()["hearts"].length > 0)setHeartsBaseTop(game.getBases()["hearts"][game.getBases()["hearts"].length - 1]);
+    
+    // Check win state
+    if (game.checkWin()) {
+      alert(`You win! Score: ${game.getScore()} points`);
+    }
   };
   
   const handleDraw = () => {
     game.drawOne();
     setCurrentDrawn(game.getDrawn());
-    setHasDrawn(game.getHasDrawn());
   };
   
   const handleSelection = (selectionType: GameSelectionType, suit?: GameCardProps["suit"], value?: number, stackIndex?: number) => {
@@ -89,6 +95,8 @@ export const App = () => {
       const validMove = game.performMove(sourceType, destinationType, sourceCard, destinationCard);
       if (!validMove) {
         console.warn("Invalid Move!");
+      } else {
+        game.applyScore(sourceType, destinationType);
       }
       
       setSourceType(undefined);
@@ -118,6 +126,7 @@ export const App = () => {
             justify={"center"}
             align={"center"}
             userSelect={"none"}
+            cursor={"pointer"}
             onClick={() => {
               if (_.isUndefined(clubsBaseTop)) {
                 handleSelection("base", "clubs", 0);
@@ -149,6 +158,7 @@ export const App = () => {
             justify={"center"}
             align={"center"}
             userSelect={"none"}
+            cursor={"pointer"}
             onClick={() => {
               if (_.isUndefined(spadesBaseTop)) {
                 handleSelection("base", "spades", 0);
@@ -180,6 +190,7 @@ export const App = () => {
             justify={"center"}
             align={"center"}
             userSelect={"none"}
+            cursor={"pointer"}
             onClick={() => {
               if (_.isUndefined(diamondsBaseTop)) {
                 handleSelection("base", "diamonds", 0);
@@ -211,6 +222,7 @@ export const App = () => {
             justify={"center"}
             align={"center"}
             userSelect={"none"}
+            cursor={"pointer"}
             onClick={() => {
               if (_.isUndefined(heartsBaseTop)) {
                 handleSelection("base", "hearts", 0);
@@ -229,6 +241,11 @@ export const App = () => {
               <Text fontSize={"3xl"}>{SYMBOLS["hearts"]}</Text>
             )}
           </Flex>
+          
+          {/* Score */}
+          <Flex direction={"column"} h={"100%"}>
+            <Text color={"white"} fontSize={"lg"} fontWeight={"semibold"}>Score: {score}</Text>
+          </Flex>
         </Flex>
         
         <Flex direction={"row"} gap={"2"} align={"center"}>
@@ -245,20 +262,22 @@ export const App = () => {
           
           {/* Draw Pile */}
           <Flex rounded={"md"} h={"180px"} minW={"120px"} p={"1"} border={"2px solid"} borderColor={"gray.300"} bg={"green.600"} justify={"center"} align={"center"} userSelect={"none"} cursor={"pointer"}>
-            <Flex onClick={handleDraw}>
-              <GameCard
-                suit={game.getPile()[0].suit}
-                value={game.getPile()[0].value}
-                isSelected={game.getPile()[0].isSelected}
-                isFaceUp={false}
-              />
-            </Flex>
+            {game.getPile().length > 0 && (
+              <Flex onClick={handleDraw}>
+                <GameCard
+                  suit={game.getPile()[0].suit}
+                  value={game.getPile()[0].value}
+                  isSelected={game.getPile()[0].isSelected}
+                  isFaceUp={false}
+                />
+              </Flex>
+            )}
           </Flex>
         </Flex>
       </Flex>
       
       {/* Play Area */}
-      <Flex direction={"column"} w={"100%"} h={"70%"}>
+      <Flex direction={"column"} w={"100%"} h={"70%"} overflow={"hidden"}>
         <Flex direction={"row"} gap={"2"} w={"100%"} justify={"space-around"}>
           {game.getStacks().map((stack, stackIndex) => {
             if (stack.length > 0) {
@@ -266,7 +285,7 @@ export const App = () => {
                 <Flex direction={"column"} gap={"1"} align={"center"}>
                   {stack.map((card, index) => {
                     return (
-                      <Flex translate={`0px ${index > 0 ? -120 * index : 0}px`}>
+                      <Flex translate={`0px ${index > 0 ? (-100 - (stack.length * 2)) * index : 0}px`}>
                         <GameCard
                           suit={card.suit}
                           value={card.value}
@@ -302,7 +321,7 @@ export const App = () => {
                     justify={"center"}
                     p={"2"}
                     userSelect={"none"}
-                    onClick={() => handleSelection("emptyStack", "", 0, stackIndex)}
+                    onClick={() => handleSelection("emptyStack", undefined, 0, stackIndex)}
                   >
                   </Flex>
                 </Flex>

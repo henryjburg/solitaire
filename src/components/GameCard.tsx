@@ -20,7 +20,7 @@ export type GameCardLocation = {
   stackPosition: number; // Index of stack position (0-n), -1 if not in stack
   isDrawn: boolean; // If the drawn card
   isBase: boolean; // If located in the card suit base
-  card: GameCardProps; // GameCardProps instance
+  card?: GameCardProps; // GameCardProps instance
 };
 
 export const SYMBOLS: Record<GameCardProps["suit"], string> = {
@@ -73,7 +73,7 @@ const GameCard = (props: GameCardProps) => {
         gap={"2"}
         align={"center"}
         justify={"center"}
-        p={"2"}
+        p={"0.5"}
         userSelect={"none"}
       >
           {/* Top Section */}

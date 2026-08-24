@@ -25,6 +25,7 @@ export class GameState {
   
   // Game tracking
   private time = 0.0;
+  private score = 0;
   private turns = 0;
   private undos = 0;
 
@@ -46,6 +47,7 @@ export class GameState {
     
     // Reset game state
     this.time = 0.0;
+    this.score = 0;
     this.turns = 0;
     this.undos = 0;
     
@@ -99,6 +101,22 @@ export class GameState {
     }
   };
   
+  public getScore = (): number => {
+    return this.score;
+  };
+  
+  public applyScore = (sourceType: GameSelectionType, destinationType: GameSelectionType): void => {
+    if (destinationType === "base" || destinationType === "emptyBase") {
+      this.score += 10;
+    } else if (sourceType === "draw" && (destinationType === "stack" || destinationType === "emptyStack")) {
+      this.score += 5;
+    } else if (sourceType === "stack" && (destinationType === "stack" || destinationType === "emptyStack")) {
+      this.score += 5;
+    } else if (sourceType === "base") {
+      this.score -= 15;
+    }
+  };
+  
   public getBases = (): Record<GameCardProps["suit"], GameCardProps[]> => {
     return this.bases;
   };
@@ -122,6 +140,8 @@ export class GameState {
   public drawOne = (): void => {
     if (this.drawIndex >= this.pile.length) {
       this.drawIndex = 0;
+    } else if (this.drawIndex < 0) {
+      this.drawIndex = this.pile.length - 1;
     }
 
     this.drawnCard = this.pile[this.drawIndex];
@@ -146,10 +166,10 @@ export class GameState {
   };
   
   private canMove = (source: GameCardLocation, destination: GameCardLocation, isBase: boolean) => {
-    if (isBase && source.card.suit === destination.card.suit && source.card.value === destination.card.value + 1) {
+    if (isBase && source.card && destination.card && source.card.suit === destination.card.suit && source.card.value === destination.card.value + 1) {
       console.info("Checking Move:", source.card.suit, source.card.value, "->", destination.card.suit, "base");
       return true;
-    } else if (source.card.value === destination.card.value - 1 && this.isOppositeSuit(source.card.suit, destination.card.suit)) {
+    } else if (source.card && destination.card && source.card.value === destination.card.value - 1 && this.isOppositeSuit(source.card.suit, destination.card.suit)) {
       console.info("Checking Move:", source.card.suit, source.card.value, "->", destination.card.suit, destination.card.value);
       return true;
     }
@@ -161,7 +181,7 @@ export class GameState {
     
     if (sourceType === "draw" && destinationType === "stack") {
       // Validation: cards must be defined and move must be valid
-      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard) || _.isUndefined(sourceCard.card) || _.isUndefined(destinationCard.card)) {
         return false;
       }
       
@@ -176,6 +196,7 @@ export class GameState {
         // Reset the drawn card state
         this.drawnCard = undefined;
         this.hasDrawn = false;
+        this.drawIndex -= 2;
 
         return true;
       }
@@ -183,7 +204,7 @@ export class GameState {
       return false;
     } else if (sourceType === "draw" && destinationType === "emptyStack") {
       // Validation: cards must be defined and move must be valid
-      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard) || _.isUndefined(sourceCard.card)) {
         return false;
       }
 
@@ -200,12 +221,13 @@ export class GameState {
         // Reset the drawn card state
         this.drawnCard = undefined;
         this.hasDrawn = false;
+        this.drawIndex -= 2;
 
         return true;
       }
     } else if (sourceType === "draw" && destinationType === "base") {
       // Validation: cards must be defined and move must be valid
-      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard) || _.isUndefined(sourceCard.card) || _.isUndefined(destinationCard.card)) {
         return false;
       }
       
@@ -220,12 +242,13 @@ export class GameState {
         // Reset the drawn card state
         this.drawnCard = undefined;
         this.hasDrawn = false;
+        this.drawIndex -= 2;
 
         return true;
       }
     } else if (sourceType === "stack" && destinationType === "stack") {
       // Validation: cards must be defined and move must be valid
-      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard) || _.isUndefined(sourceCard.card) || _.isUndefined(destinationCard.card)) {
         return false;
       }
       
@@ -248,7 +271,7 @@ export class GameState {
       return false;
     } else if (sourceType === "stack" && destinationType === "emptyStack") {
       // Validation: cards must be defined and move must be valid
-      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard) || _.isUndefined(sourceCard.card)) {
         return false;
       }
       
@@ -271,7 +294,7 @@ export class GameState {
       }
     } else if (sourceType === "stack" && destinationType === "base") {
       // Validation: cards must be defined and move must be valid
-      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard) || _.isUndefined(sourceCard.card) || _.isUndefined(destinationCard.card)) {
         return false;
       }
       
@@ -298,7 +321,7 @@ export class GameState {
       }
     } else if (sourceType === "base" && destinationType === "stack") {
       // Validation: cards must be defined and move must be valid
-      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard) || _.isUndefined(sourceCard.card) || _.isUndefined(destinationCard.card)) {
         return false;
       }
       
@@ -385,6 +408,26 @@ export class GameState {
       isDrawn: false,
       card: undefined,
     };
+  };
+  
+  public checkWin = (): boolean => {
+    // Check that all cards in stacks are turned over
+    for (const stack of this.stacks) {
+      for (const card of stack) {
+        if (!card.isFaceUp) {
+          return false;
+        }
+      }
+    }
+    
+    // Check that the base piles are all full
+    if (this.bases["clubs"].length !== 13) return false;
+    if (this.bases["spades"].length !== 13) return false;
+    if (this.bases["diamonds"].length !== 13) return false;
+    if (this.bases["hearts"].length !== 13) return false;
+    
+    // Check that draw pile is empty
+    return this.pile.length === 0;
   };
 };
 

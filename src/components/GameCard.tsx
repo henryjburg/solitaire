@@ -1,10 +1,20 @@
 import React, { useState } from "react";
-import { Flex, Text, useStatStyles } from "@chakra-ui/react";
+import { Flex, Text } from "@chakra-ui/react";
+import GameState from "../lib/GameState";
 
 export type GameCardProps = {
   suit: "spades" | "clubs" | "diamonds" | "hearts";
   value: number;
+  isFaceUp: boolean;
   isSelected: boolean;
+  handleSelection?: (suit: "spades" | "clubs" | "diamonds" | "hearts", value: number) => void;
+};
+
+export type GameCardLocation = {
+  stackIndex: number; // Index of stack (0-6), -1 if not in stack
+  stackPosition: number; // Index of stack position (0-n), -1 if not in stack
+  isDrawn: boolean; // If the drawn card
+  isBase: boolean; // If located in the card suit base
 };
 
 export const SYMBOLS: Record<GameCardProps["suit"], string> = {
@@ -31,28 +41,49 @@ const GameCard = (props: GameCardProps) => {
     value = "K";
   }
   
-  const handleClick = () => {
-    setCardActive(!cardActive);
-    console.info("Clicked Card:", props.suit, value);
-  };
-  
   return (
-    <Flex rounded={"lg"} minH={"150px"} minW={"100px"} p={"1"} bg={cardActive ? "yellow.200" : "white"} align={"center"} justify={"center"} cursor={"pointer"} key={`${props.suit}_${props.value}`} border={"0.5px solid"} borderColor={color} onClick={handleClick}>
-      <Flex rounded={"md"} h={"100%"} w={"100%"} border={"3px solid"} borderColor={color} direction={"column"} gap={"2"} align={"center"} justify={"center"} p={"2"} userSelect={"none"}>
-        {/* Top Section */}
-        <Flex w={"100%"} h={"20%"} justify={"start"}>
-          <Text fontSize={"lg"}>{symbol}</Text>
-        </Flex>
-        
-        {/* Middle Section */}
-        <Flex w={"100%"} h={"60%"} align={"center"} justify={"center"}>
-          <Text fontWeight={"bold"} fontSize={"4xl"} color={color}>{value}</Text>
-        </Flex>
+    <Flex
+      rounded={"lg"}
+      minH={"150px"}
+      minW={"100px"}
+      p={"1"}
+      bg={cardActive ? "yellow.200" : "white"}
+      align={"center"}
+      justify={"center"}
+      cursor={"pointer"}
+      key={`${props.suit}_${props.value}`}
+      border={"2px solid"}
+      borderColor={props.isFaceUp ? color : "black"}
+      onClick={() => props.handleSelection?.(props.suit, props.value)}
+    >
+      <Flex
+        rounded={"md"}
+        h={"100%"}
+        w={"100%"}
+        bg={props.isFaceUp ? "white" : "blue.400"}
+        border={"3px solid"}
+        borderColor={props.isFaceUp ? color : "black"}
+        direction={"column"}
+        gap={"2"}
+        align={"center"}
+        justify={"center"}
+        p={"2"}
+        userSelect={"none"}
+      >
+          {/* Top Section */}
+          <Flex w={"100%"} h={"20%"} justify={"start"}>
+            <Text fontSize={"lg"} color={color} visibility={props.isFaceUp ? "visible" : "hidden"}>{symbol} {value}</Text>
+          </Flex>
+          
+          {/* Middle Section */}
+          <Flex w={"100%"} h={"60%"} align={"center"} justify={"center"}>
+            <Text fontWeight={"bold"} fontSize={"4xl"} color={color} visibility={props.isFaceUp ? "visible" : "hidden"}>{value}</Text>
+          </Flex>
 
-        {/* Bottom Section */}
-        <Flex w={"100%"} h={"20%"} justify={"end"}>
-          <Text fontSize={"lg"}>{symbol}</Text>
-        </Flex>
+          {/* Bottom Section */}
+          <Flex w={"100%"} h={"20%"} justify={"end"}>
+            <Text fontSize={"lg"} color={color} visibility={props.isFaceUp ? "visible" : "hidden"}>{value} {symbol}</Text>
+          </Flex>
       </Flex>
     </Flex>
   );

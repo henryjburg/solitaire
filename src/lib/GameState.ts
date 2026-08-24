@@ -1,7 +1,9 @@
-import { GameCardLocation, GameCardProps } from "../components/GameCard";
+import { GameCardIdentity, GameCardLocation, GameCardProps } from "../components/GameCard";
 
 // Utility functions
 import _ from "lodash";
+
+export type GameSelectionType = "draw" | "emptyStack" | "stack" | "emptyBase" | "base";
 
 export class GameState {
   // All cards
@@ -97,6 +99,10 @@ export class GameState {
     }
   };
   
+  public getBases = (): Record<GameCardProps["suit"], GameCardProps[]> => {
+    return this.bases;
+  };
+  
   public getStacks = (): GameCardProps[][] => {
     return this.stacks;
   };
@@ -114,16 +120,16 @@ export class GameState {
   };
   
   public drawOne = (): void => {
-    this.hasDrawn = true;
-
-    this.drawnCard = this.pile[this.drawIndex];
-    this.drawIndex++;
-    if (this.drawIndex === this.pile.length) {
+    if (this.drawIndex >= this.pile.length) {
       this.drawIndex = 0;
     }
 
-    console.info("Drawing:", this.drawnCard.suit, this.drawnCard.value, "Draw Index:", this.drawIndex);
+    this.drawnCard = this.pile[this.drawIndex];
     this.drawnCard.isFaceUp = true;
+    console.info("Draw Index:", this.drawIndex, "Card:", this.drawnCard.suit, this.drawnCard.value);
+
+    this.hasDrawn = true;
+    this.drawIndex++;
   };
   
   private isOppositeSuit = (suitA: GameCardProps["suit"], suitB: GameCardProps["suit"]): boolean => {
@@ -139,68 +145,207 @@ export class GameState {
     return false;
   };
   
-  public canMove = (source: GameCardProps, destination: GameCardProps, isBase: boolean) => {
-    if (isBase && source.suit === destination.suit) {
+  private canMove = (source: GameCardLocation, destination: GameCardLocation, isBase: boolean) => {
+    if (isBase && source.card.suit === destination.card.suit && source.card.value === destination.card.value + 1) {
+      console.info("Checking Move:", source.card.suit, source.card.value, "->", destination.card.suit, "base");
       return true;
-    } else {
-      return source.value === destination.value - 1 && this.isOppositeSuit(source.suit, destination.suit);
+    } else if (source.card.value === destination.card.value - 1 && this.isOppositeSuit(source.card.suit, destination.card.suit)) {
+      console.info("Checking Move:", source.card.suit, source.card.value, "->", destination.card.suit, destination.card.value);
+      return true;
     }
+    return false;
   };
   
-  public performMove = (source: GameCardProps, destination: GameCardProps) => {
-    const sourceLocation = this.findSelectedCard(source);
-    const destinationLocation = this.findSelectedCard(destination);
+  public performMove = (sourceType: GameSelectionType, destinationType: GameSelectionType, sourceCard?: GameCardLocation, destinationCard?: GameCardLocation): boolean => {
+    console.info("Performing Move:", sourceType, sourceCard?.card?.suit, sourceCard?.card?.value, "->", destinationType);
     
-    if (destinationLocation.stackIndex >= 0) {
-      // Destination is a current stack
-      if (sourceLocation.isDrawn) {
-        // Case 1: Card is the currently drawn card
-        if (this.drawIndex > 0 && this.drawIndex < this.pile.length - 1) {
-          // Within the draw pile
-          const pileStackA = this.pile.slice(0, this.drawIndex);
-          const pileStackB = this.pile.slice(this.drawIndex + 1);
-          
-          // Splice the new pile together
-          this.pile = [...pileStackA, ...pileStackB];
-        } else if (this.drawIndex === this.pile.length - 1) {
-          // Last card in the draw pile
-          this.pile = [...this.pile.slice(0, this.pile.length - 1)];
-        } else if (this.drawIndex === 0) {
-          // First card in the draw pile
-          this.pile = [...this.pile.slice(1)];
-        }
+    if (sourceType === "draw" && destinationType === "stack") {
+      // Validation: cards must be defined and move must be valid
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+        return false;
+      }
+      
+      if (this.canMove(sourceCard, destinationCard, false)) {
+        console.info("Pile Size (Before):", this.pile.length);
+        _.remove(this.pile, sourceCard.card);
+        console.info("Pile Size (After):", this.pile.length);
         
         // Move the card to the top of the stack
-        this.stacks[destinationLocation.stackIndex].push(source);
+        this.stacks[destinationCard.stackIndex].push(sourceCard.card);
         
         // Reset the drawn card state
         this.drawnCard = undefined;
         this.hasDrawn = false;
-      } else if (sourceLocation.stackIndex >= 0) {
-        //  Case 2: Card is part of a stack
-        const cardStack = this.stacks[sourceLocation.stackIndex].slice(sourceLocation.stackPosition);
-        const remainingStack = this.stacks[sourceLocation.stackIndex].slice(0, sourceLocation.stackPosition);
+
+        return true;
+      }
+      
+      return false;
+    } else if (sourceType === "draw" && destinationType === "emptyStack") {
+      // Validation: cards must be defined and move must be valid
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+        return false;
+      }
+
+      if (sourceCard.card.value !== 13) {
+        return false;
+      } else {
+        console.info("Pile Size (Before):", this.pile.length);
+        _.remove(this.pile, sourceCard.card);
+        console.info("Pile Size (After):", this.pile.length);
         
+        // Move the card to the top of the stack
+        this.stacks[destinationCard.stackIndex].push(sourceCard.card);
+        
+        // Reset the drawn card state
+        this.drawnCard = undefined;
+        this.hasDrawn = false;
+
+        return true;
+      }
+    } else if (sourceType === "draw" && destinationType === "base") {
+      // Validation: cards must be defined and move must be valid
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+        return false;
+      }
+      
+      if (this.canMove(sourceCard, destinationCard, true)) {
+        console.info("Pile Size (Before):", this.pile.length);
+        _.remove(this.pile, sourceCard.card);
+        console.info("Pile Size (After):", this.pile.length);
+        
+        // Move the card to the base
+        this.bases[sourceCard.card.suit].push(sourceCard.card);
+        
+        // Reset the drawn card state
+        this.drawnCard = undefined;
+        this.hasDrawn = false;
+
+        return true;
+      }
+    } else if (sourceType === "stack" && destinationType === "stack") {
+      // Validation: cards must be defined and move must be valid
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+        return false;
+      }
+      
+      if (this.canMove(sourceCard, destinationCard, false)) {
+        const cardStack = this.stacks[sourceCard.stackIndex].slice(sourceCard.stackPosition);
+        const remainingStack = this.stacks[sourceCard.stackIndex].slice(0, sourceCard.stackPosition);
+
         // Re-assign the remaining stack and the moved stack
-        this.stacks[sourceLocation.stackIndex] = remainingStack;
-        this.stacks[destinationLocation.stackIndex].push(...cardStack);
-        
+        this.stacks[sourceCard.stackIndex] = remainingStack;
+        this.stacks[destinationCard.stackIndex].push(...cardStack);
+
         // Ensure card on the source location is turned over
         if (remainingStack.length > 0) {
-          this.stacks[sourceLocation.stackIndex][remainingStack.length - 1].isFaceUp = true;
+          this.stacks[sourceCard.stackIndex][remainingStack.length - 1].isFaceUp = true;
         }
+
+        return true;
+      }
+      
+      return false;
+    } else if (sourceType === "stack" && destinationType === "emptyStack") {
+      // Validation: cards must be defined and move must be valid
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+        return false;
+      }
+      
+      if (sourceCard.card.value !== 13) {
+        return false;
+      } else {
+        const cardStack = this.stacks[sourceCard.stackIndex].slice(sourceCard.stackPosition);
+        const remainingStack = this.stacks[sourceCard.stackIndex].slice(0, sourceCard.stackPosition);
+
+        // Re-assign the remaining stack and the moved stack
+        this.stacks[sourceCard.stackIndex] = remainingStack;
+        this.stacks[destinationCard.stackIndex].push(...cardStack);
+
+        // Ensure card on the source location is turned over
+        if (remainingStack.length > 0) {
+          this.stacks[sourceCard.stackIndex][remainingStack.length - 1].isFaceUp = true;
+        }
+
+        return true;
+      }
+    } else if (sourceType === "stack" && destinationType === "base") {
+      // Validation: cards must be defined and move must be valid
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+        return false;
+      }
+      
+      if (this.canMove(sourceCard, destinationCard, true)) {
+        // Check the stack position of the source card
+        if (sourceCard.stackPosition !== this.stacks[sourceCard.stackIndex].length - 1) {
+          console.warn("Cannot move from within the stack!");
+          return false;
+        }
+        
+        // Re-assign the remaining stack
+        const remainingStack = this.stacks[sourceCard.stackIndex].slice(0, sourceCard.stackPosition);
+        this.stacks[sourceCard.stackIndex] = remainingStack;
+
+        // Ensure card on the source location is turned over
+        if (remainingStack.length > 0) {
+          this.stacks[sourceCard.stackIndex][remainingStack.length - 1].isFaceUp = true;
+        }
+        
+        // Move the card to the base
+        this.bases[sourceCard.card.suit].push(sourceCard.card);
+
+        return true;
+      }
+    } else if (sourceType === "base" && destinationType === "stack") {
+      // Validation: cards must be defined and move must be valid
+      if (_.isUndefined(sourceCard) || _.isUndefined(destinationCard)) {
+        return false;
+      }
+      
+      if (this.canMove(sourceCard, destinationCard, true)) {
+        const baseCard = this.bases[sourceCard.card.suit].pop();
+        if (_.isUndefined(baseCard)) {
+          return false;
+        }
+        
+        // Move the card to the base
+        this.stacks[destinationCard.stackIndex].push(baseCard);
+
+        // Ensure card on the destination location is turned over
+        this.stacks[destinationCard.stackIndex][this.stacks[destinationCard.stackIndex].length - 1].isFaceUp = true;
+
+        return true;
       }
     }
+
+    return false;
   };
   
-  public findSelectedCard = (card: GameCardProps): GameCardLocation => {
-    const topBaseCard = this.bases[card.suit][this.bases[card.suit].length - 1];
-    if (topBaseCard && topBaseCard.value === card.value) {
+  public findSelectedCard = (suit: GameCardProps["suit"], value: number): GameCardLocation => {
+    // Check if this is an empty base (value will be 0)
+    if (value === 0) {
       return {
         stackIndex: -1,
         stackPosition: -1,
         isBase: true,
         isDrawn: false,
+        card: {
+          suit: suit,
+          value: value,
+          isFaceUp: false,
+          isSelected: false,
+        },
+      };
+    }
+    
+    const topBaseCard = this.bases[suit][this.bases[suit].length - 1];
+    if (topBaseCard && topBaseCard.value === value) {
+      return {
+        stackIndex: -1,
+        stackPosition: -1,
+        isBase: true,
+        isDrawn: false,
+        card: topBaseCard,
       };
     }
 
@@ -208,34 +353,37 @@ export class GameState {
     for (let s = 0; s < this.stacks.length; s++) {
       for (let sp = 0; sp < this.stacks[s].length; sp++) {
         const stackCard = this.stacks[s][sp];
-        if (stackCard.suit === card.suit && stackCard.value === card.value) {
+        if (stackCard.suit === suit && stackCard.value === value) {
           return {
             stackIndex: s,
             stackPosition: sp,
             isBase: false,
             isDrawn: false,
+            card: stackCard,
           };
         }
       }
     }
     
     // Check if the drawn card
-    if (this.drawnCard && this.drawnCard.suit === card.suit && this.drawnCard.value === card.value) {
+    if (this.drawnCard && this.drawnCard.suit === suit && this.drawnCard.value === value) {
       return {
         stackIndex: -1,
         stackPosition: -1,
         isBase: false,
         isDrawn: true,
+        card: this.drawnCard,
       };
     }
     
     // Invalid case
-    console.warn("Unable to locate:", card.suit, card.value);
+    console.warn("Unable to locate:", suit, value);
     return {
       stackIndex: -1,
       stackPosition: -1,
       isBase: false,
       isDrawn: false,
+      card: undefined,
     };
   };
 };

@@ -2,12 +2,17 @@ import React, { useState } from "react";
 import { Flex, Text } from "@chakra-ui/react";
 import GameState from "../lib/GameState";
 
-export type GameCardProps = {
-  suit: "spades" | "clubs" | "diamonds" | "hearts";
+export type SUITS = "spades" | "clubs" | "diamonds" | "hearts";
+
+export type GameCardIdentity = {
+  suit: SUITS;
   value: number;
+};
+
+export type GameCardProps = GameCardIdentity & {
   isFaceUp: boolean;
   isSelected: boolean;
-  handleSelection?: (suit: "spades" | "clubs" | "diamonds" | "hearts", value: number) => void;
+  handleSelection?: (suit: SUITS, value: number) => void;
 };
 
 export type GameCardLocation = {
@@ -15,6 +20,7 @@ export type GameCardLocation = {
   stackPosition: number; // Index of stack position (0-n), -1 if not in stack
   isDrawn: boolean; // If the drawn card
   isBase: boolean; // If located in the card suit base
+  card: GameCardProps; // GameCardProps instance
 };
 
 export const SYMBOLS: Record<GameCardProps["suit"], string> = {

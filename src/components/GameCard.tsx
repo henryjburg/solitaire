@@ -13,6 +13,9 @@ export type GameCardProps = GameCardIdentity & {
   isFaceUp: boolean;
   isSelected: boolean;
   handleSelection?: (suit: SUITS, value: number) => void;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragOver?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
 };
 
 export type GameCardLocation = {
@@ -31,8 +34,6 @@ export const SYMBOLS: Record<GameCardProps["suit"], string> = {
 };
 
 const GameCard = (props: GameCardProps) => {
-  const [cardActive, setCardActive] = useState(props.isSelected);
-  
   const color = ["spades", "clubs"].includes(props.suit) ? "black.700" : "red.700";
   const symbol = SYMBOLS[props.suit];
   
@@ -49,18 +50,23 @@ const GameCard = (props: GameCardProps) => {
   
   return (
     <Flex
+      id={`${props.suit}_${props.value}`}
+      key={`${props.suit}_${props.value}`}
       rounded={"lg"}
       minH={"150px"}
       minW={"100px"}
       p={"1"}
-      bg={cardActive ? "yellow.200" : "white"}
+      bg={props.isSelected ? "yellow.200" : "white"}
       align={"center"}
       justify={"center"}
       cursor={"pointer"}
-      key={`${props.suit}_${props.value}`}
       border={"2px solid"}
       borderColor={props.isFaceUp ? color : "black"}
       onClick={() => props.handleSelection?.(props.suit, props.value)}
+      draggable={props.isFaceUp}
+      onDragStart={props.onDragStart}
+      onDragOver={props.onDragOver}
+      onDrop={props.onDrop}
     >
       <Flex
         rounded={"md"}
@@ -75,19 +81,20 @@ const GameCard = (props: GameCardProps) => {
         justify={"center"}
         p={"0.5"}
         userSelect={"none"}
+        pointerEvents={"none"}
       >
           {/* Top Section */}
-          <Flex w={"100%"} h={"20%"} justify={"start"}>
+          <Flex w={"100%"} h={"20%"} justify={"start"} userSelect={"none"}>
             <Text fontSize={"lg"} color={color} visibility={props.isFaceUp ? "visible" : "hidden"}>{symbol} {value}</Text>
           </Flex>
           
           {/* Middle Section */}
-          <Flex w={"100%"} h={"60%"} align={"center"} justify={"center"}>
+          <Flex w={"100%"} h={"60%"} align={"center"} justify={"center"} userSelect={"none"}>
             <Text fontWeight={"bold"} fontSize={"4xl"} color={color} visibility={props.isFaceUp ? "visible" : "hidden"}>{value}</Text>
           </Flex>
 
           {/* Bottom Section */}
-          <Flex w={"100%"} h={"20%"} justify={"end"}>
+          <Flex w={"100%"} h={"20%"} justify={"end"} userSelect={"none"}>
             <Text fontSize={"lg"} color={color} visibility={props.isFaceUp ? "visible" : "hidden"}>{value} {symbol}</Text>
           </Flex>
       </Flex>

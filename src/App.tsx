@@ -90,6 +90,32 @@ export const App = () => {
     }
   };
   
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  };
+  
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLDivElement;    
+    if (target.id.split("_").length === 2) {
+      console.info("Drop Target:", target.id.split("_")[0], target.id.split("_")[1]);
+      
+      // If first value is "base", then it's an empty base
+      if (target.id.split("_")[0] === "base") {
+        const suit = target.id.split("_")[1];
+        handleSelection("base", suit, 0);
+      } else if (target.id.split("_")[0] === "emptyStack") {
+        const stackIndex = parseInt(target.id.split("_")[1]);
+        handleSelection("emptyStack", undefined, 0, stackIndex)
+      } else {
+        const suit = target.id.split("_")[0];
+        const value = parseInt(target.id.split("_")[1]);
+        handleSelection("stack", suit, value);
+      }
+    } else {
+      console.warn("Invalid Destination!");
+    }
+  };
+  
   useEffect(() => {
     if (!_.isUndefined(sourceType) && !_.isUndefined(destinationType)) {
       const validMove = game.performMove(sourceType, destinationType, sourceCard, destinationCard);
@@ -116,6 +142,7 @@ export const App = () => {
         <Flex direction={"row"} gap={"2"}>
           {/* Base: Clubs */}
           <Flex
+            id={"base_clubs"}
             rounded={"md"}
             h={"180px"}
             minW={"120px"}
@@ -127,6 +154,8 @@ export const App = () => {
             align={"center"}
             userSelect={"none"}
             cursor={"pointer"}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
             onClick={() => {
               if (_.isUndefined(clubsBaseTop)) {
                 handleSelection("base", "clubs", 0);
@@ -142,12 +171,19 @@ export const App = () => {
                 handleSelection={() => handleSelection("base", "clubs", clubsBaseTop.value)}
               />
             ) : (
-              <Text fontSize={"3xl"}>{SYMBOLS["clubs"]}</Text>
+              <Text
+                fontSize={"3xl"}
+                userSelect={"none"}
+                pointerEvents={"none"}
+              >
+                {SYMBOLS["clubs"]}
+              </Text>
             )}
           </Flex>
 
           {/* Base: Spades */}
           <Flex
+            id={"base_spades"}
             rounded={"md"}
             h={"180px"}
             minW={"120px"}
@@ -159,6 +195,8 @@ export const App = () => {
             align={"center"}
             userSelect={"none"}
             cursor={"pointer"}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
             onClick={() => {
               if (_.isUndefined(spadesBaseTop)) {
                 handleSelection("base", "spades", 0);
@@ -174,12 +212,19 @@ export const App = () => {
                 handleSelection={() => handleSelection("base", "spades", spadesBaseTop.value)}
               />
             ) : (
-              <Text fontSize={"3xl"}>{SYMBOLS["spades"]}</Text>
+              <Text
+                fontSize={"3xl"}
+                userSelect={"none"}
+                pointerEvents={"none"}
+              >
+                {SYMBOLS["spades"]}
+              </Text>
             )}
           </Flex>
 
           {/* Base: Diamonds */}
           <Flex
+            id={"base_diamonds"}
             rounded={"md"}
             h={"180px"}
             minW={"120px"}
@@ -191,6 +236,8 @@ export const App = () => {
             align={"center"}
             userSelect={"none"}
             cursor={"pointer"}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
             onClick={() => {
               if (_.isUndefined(diamondsBaseTop)) {
                 handleSelection("base", "diamonds", 0);
@@ -206,12 +253,19 @@ export const App = () => {
                 handleSelection={() => handleSelection("base", "diamonds", diamondsBaseTop.value)}
               />
             ) : (
-              <Text fontSize={"3xl"}>{SYMBOLS["diamonds"]}</Text>
+              <Text
+                fontSize={"3xl"}
+                userSelect={"none"}
+                pointerEvents={"none"}
+              >
+                {SYMBOLS["diamonds"]}
+              </Text>
             )}
           </Flex>
 
           {/* Base: Hearts */}
           <Flex
+            id={"base_hearts"}
             rounded={"md"}
             h={"180px"}
             minW={"120px"}
@@ -223,6 +277,8 @@ export const App = () => {
             align={"center"}
             userSelect={"none"}
             cursor={"pointer"}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
             onClick={() => {
               if (_.isUndefined(heartsBaseTop)) {
                 handleSelection("base", "hearts", 0);
@@ -238,7 +294,13 @@ export const App = () => {
                 handleSelection={() => handleSelection("base", "hearts", heartsBaseTop.value)}
               />
             ) : (
-              <Text fontSize={"3xl"}>{SYMBOLS["hearts"]}</Text>
+              <Text
+                fontSize={"3xl"}
+                userSelect={"none"}
+                pointerEvents={"none"}
+              >
+                {SYMBOLS["hearts"]}
+              </Text>
             )}
           </Flex>
           
@@ -291,7 +353,10 @@ export const App = () => {
                           value={card.value}
                           isSelected={card.isSelected}
                           isFaceUp={card.isFaceUp}
-                          handleSelection={() => handleSelection("stack", card.suit, card.value)}
+                          handleSelection={() => handleSelection("stack", card.suit, card.value, stackIndex)}
+                          onDragStart={() => handleSelection("stack", card.suit, card.value, stackIndex)}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
                         />
                       </Flex>
                     );
@@ -301,6 +366,7 @@ export const App = () => {
             } else {
               return (
                 <Flex
+                  id={`emptyStack_${stackIndex}`}
                   rounded={"lg"}
                   h={"150px"}
                   minW={"100px"}
@@ -310,6 +376,10 @@ export const App = () => {
                   cursor={"pointer"}
                   border={"2px solid"}
                   borderColor={"gray.400"}
+                  userSelect={"none"}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onClick={() => handleSelection("emptyStack", undefined, 0, stackIndex)}
                 >
                   <Flex
                     rounded={"md"}
@@ -321,7 +391,6 @@ export const App = () => {
                     justify={"center"}
                     p={"2"}
                     userSelect={"none"}
-                    onClick={() => handleSelection("emptyStack", undefined, 0, stackIndex)}
                   >
                   </Flex>
                 </Flex>
